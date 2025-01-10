@@ -1,0 +1,14 @@
+---
+# vars file for default_packages
+packages_to_install:
+  - dnsutils
+  - net-tools
+  - rsync
+  - mc
+  - curl
+  - wget
+  - apt-transport-https
+  - gnupg2
+  - software-properties-common
+  - ca-certificates
+  - parted
