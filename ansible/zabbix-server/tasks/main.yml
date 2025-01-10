@@ -1,0 +1,35 @@
+---
+# tasks file for zabbix-server
+
+- name: Install Zabbix-Server
+  apt:
+    name:
+      - zabbix-server-mysql
+      - zabbix-frontend-php
+      - zabbix-apache-conf
+      - zabbix-sql-scripts
+    state: present
+  when: "'zabbix' in inventory_hostname"
+
+- name: Install DB repo
+  shell: "{{ item }}"
+  loop:
+    - 'curl -LsS -O https://downloads.mariadb.com/MariaDB/mariadb_repo_setup'
+    - 'bash mariadb_repo_setup --mariadb-server-version=10.11'
+  when: "'zabbix' in inventory_hostname"
+
+- name: Install DB
+  apt:
+    name:
+      - "mariadb-common"
+      - "mariadb-server"
+      - "mariadb-client"
+    state: present
+  when: "'zabbix' in inventory_hostname"
+
+- name: Start and Enable DB
+  service:
+    name: mariadb
+    state: started
+    enabled: true
+  when: "'zabbix' in inventory_hostname"
