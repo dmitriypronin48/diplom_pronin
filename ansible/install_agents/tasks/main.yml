@@ -1,0 +1,51 @@
+---
+# tasks file for install_agents
+- name: Installing zabbix_agent2
+  block:
+    - name: Installing gnupg
+      ansible.builtin.apt:
+        pkg:
+        - gnupg
+
+    - name: Wget and install
+      shell: "{{ item }}"
+      loop:
+        - "wget https://repo.zabbix.com/zabbix/7.0/ubuntu/pool/main/z/zabbix-release/zabbix-release_7.0-2+ubuntu24.04_all.deb"
+        - "dpkg -i zabbix-release_7.0-2+ubuntu24.04_all.deb > /dev/null"
+
+    - name: Install agent
+      ansible.builtin.apt:
+        update_cache : true
+        pkg:
+        - zabbix-agent2
+
+- name: Configuring zabbix-agent
+  ansible.builtin.template:
+    src: zabbix_agent2.j2
+    dest: /etc/zabbix/zabbix_agent2.conf
+
+- name: Restarting and enabling zabbix-agent
+  ansible.builtin.service:
+    name: zabbix-agent2
+    state: restarted
+    enabled: yes
+
+- name: Installing filebeat
+  shell: "{{ item }}"
+  loop:
+    - "curl -L -O https://mirror.yandex.ru/mirrors/elastic/8/pool/main/f/filebeat/filebeat-8.10.2-amd64.deb"
+    - "dpkg -i filebeat-8.10.2-amd64.deb"
+  when: "'site' in inventory_hostname"
+
+- name: Making config file
+  template:
+    src: filebeat.j2
+    dest: /etc/filebeat/filebeat.yml
+  when: "'site' in inventory_hostname"
+
+- name: Restart and Enable filebeat
+  service:
+    name: filebeat
+    state: restarted
+    enabled: yes
+  when: "'site' in inventory_hostname"
