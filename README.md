@@ -360,11 +360,277 @@ resource "yandex_lb_network_load_balancer" "nlb" {
 
 ## Работаем с ансибл
 Создадим каталог для сохранения файлов ансибла и файлики 
-mkdir ~/ansible && cd ~/ansible && touch inventory.yaml && touch playbook.yaml && touch ansible.cfg
+mkdir ~/ansible && cd ~/ansible && touch inventory.yml && touch playbook.yml && touch ansible.cfg
+Кусочек из работы:
+inventory.yml
+```
+linux: #группа хостов
+  children: #Делал для подгруппы хостов
+    nginx:
+      hosts:
+        site-1:
+          ansible_host: брал_с_клауда.auto.internal 
+        site-2:
+          ansible_host: epd4ua449pd1lkaa2vhm.auto.internal #Адрес машиныw
+  vars: #Переменные подрупп
+    ansible_user: "юзер_из_мейна_терраформа"
+    connection_protocol: ssh
+    ansible_become: true #переход в рута
+    ansible_ssh_private_key_file: ~/.ssh/id_ed25519
+```
+
+playbook.yml
+```
+- name: Установка стандартных пакетов
+  hosts: all
+  roles:
+    - role: default_packages
+  tags:
+    - install_packages
+    
+- name: Установка и настройка nginx c кастомной страницей
+  hosts: nginx
+  roles:
+    - role: nginx_custom
+  tags:
+    - nginx_custom
+```
+ansible.cfg
+```
+[defaults]
+host_key_checking = false
+```
+Создание ролей
+```
+ansible-galaxy init default_packages
+ansible-galaxy init nginx_custom
+```
+Идем и корректируем
+nano default_packages/tasks/main.yml
+
+```
+- name: Название машины
+  shell: "echo {{ inventory_hostname }} > /etc/hostname"
+  when: "inventory_hostname != ansible_hostname"
+
+- name: Установка программ #Имя задачи
+  apt: #Используемый модуль
+    name: "{{ item }}" 
+    state: present
+  loop:
+    - "{{ packages_to_install }}" #Цикл будет перебирать все значения из переме>
+```
+nano default_packages/vars/main.yml
+```
+packages_to_install:
+  - dnsutils
+  - net-tools
+  - rsync
+  - mc
+  - curl
+  - wget
+  - apt-transport-https
+  - gnupg2
+  - software-properties-common
+  - ca-certificates
+  - parted
+```
+Для кастом нжинкс nano nginx_custom/tasks/main.yml
+```
+- name: Установка Nginx
+  apt:
+    name: "nginx"
+    state: present
+
+- name: Подмена веб-страницы
+  ansible.builtin.template:
+    src: index.j2
+    dest: /var/www/html/index.nginx-debian.html
+  notify: "Nginx Reloader"
+```
+nano nginx_custom/handlers/main.yml
+```
+# handlers file for nginx_custom
+- name: Nginx Reloader
+  ansible.builtin.service:
+    name: nginx
+    state: restarted
+    enabled: yes
+  listen: "Nginx Reloader"
+```
+nano nginx_custom/templates/main.yml
+```
+<body>
+<p><center><b>Hello from {{ inventory_hostname }}!</b></center></p>
+</body>
+```
+Прокатил роль ансибла ansible-playbook -i inventory.yaml playbook.yaml
+![Скрин ](img/nginx.jpg)
+
+Тут достаточно емко описывать каждый шаг как он выглядит, целесообразней поглядеть как в приложенных файлах под ансибл.
+Сделал раскатку сразу всех компонентов, чтобы не тратить поодиночке на запуск ролей с плейбуками.
+Скажу так, что долго мучался с с поиском репозиториев с зеркалами яндекса.
+
+Для терраформа добавил настройку.
+в main.tf
+```
+resource "yandex_vpc_gateway" "private_net" {
+  name = "private_net_nat"
+  shared_egress_gateway {}
+}
+
+resource "yandex_vpc_route_table" "route_with_nat" {
+  network_id = "${yandex_vpc_network.network-1.id}" 
+
+  static_route {
+    destination_prefix = "192.168.30.0/24"
+    next_hop_address   = "192.168.30.1"
+  }
+
+  static_route {
+    destination_prefix = "192.168.20.0/24"
+    next_hop_address   = "192.168.30.1"
+  }
+
+  static_route {
+    destination_prefix = "0.0.0.0/0"
+    gateway_id         = "${yandex_vpc_gateway.private_net.id}"
+  }
+}
+
+#Этот ресурс у нас уже есть, добавляем строу
+resource "yandex_vpc_subnet" "subnet" {
+  for_each       = var.subnets
+  name           = each.value["name"]
+  zone           = each.value["zone"]
+  network_id     = yandex_vpc_network.network-1.id
+  v4_cidr_blocks = each.value["v4_cidr_blocks"]
+  route_table_id = yandex_vpc_route_table.route_with_nat.id
+}
+```
+#network-1 - это индекс с которым мы создали сеть
+route_table_id = yandex_vpc_route_table.route_with_nat.id - связка подсетки с маршрутизацией
+
+Для снепшотов в тот же мейн добавляем
+```
+resource "yandex_compute_snapshot" "disk-snap" {
+  for_each = var.virtual_machines
+  name     = each.value["disk_name"]
+  source_disk_id = yandex_compute_disk.boot-disk[each.key].id
+}
+
+resource "yandex_compute_snapshot_schedule" "one_week_ttl_every_day" {
+  for_each = var.virtual_machines
+  name     = each.value["disk_name"]
+
+  schedule_policy {
+        expression = "0 0 * * *"
+  }
+
+  snapshot_count = 7
+  retention_period = "168h" 
+
+  disk_ids = ["${yandex_compute_disk.boot-disk[each.key].id}"] #Расписание применяется к ранее созданным дискам
+}
+```
+- expression = "0 0 * * *" - ежедневно в 00
+- snapshot_count = 7 - 7 снепшотов которые живут
+- retention_period = "168h" - срок жизни неделя
 
 
+Настройка кибаны на http://<публичный адрес kibana>:5601
+
+Принимаем соглашения, создаем новый Data View
+
+`` name: Любое index-template: filebeat-*
+смотрим логи
+
+## БД
+Заходим по ssh на машину с бд и делаем mysql_secure_installation
+Далее настраиваем 
+```
+root@fhmb2pg6ghl3p3648qdj:~# mysql_secure_installation
+
+NOTE: RUNNING ALL PARTS OF THIS SCRIPT IS RECOMMENDED FOR ALL MariaDB
+      SERVERS IN PRODUCTION USE!  PLEASE READ EACH STEP CAREFULLY!
+
+In order to log into MariaDB to secure it, we'll need the current
+password for the root user. If you've just installed MariaDB, and
+haven't set the root password yet, you should just press enter here.
+
+Enter current password for root (enter for none):
+OK, successfully used password, moving on...
+
+Setting the root password or using the unix_socket ensures that nobody
+can log into the MariaDB root user without the proper authorisation.
+
+You already have your root account protected, so you can safely answer 'n'.
+
+Switch to unix_socket authentication [Y/n] y
+Enabled successfully!
+Reloading privilege tables..
+ ... Success!
 
 
+You already have your root account protected, so you can safely answer 'n'.
+
+Change the root password? [Y/n] y
+New password:
+Re-enter new password:
+Password updated successfully!
+Reloading privilege tables..
+ ... Success!
 
 
+By default, a MariaDB installation has an anonymous user, allowing anyone
+to log into MariaDB without having to have a user account created for
+them.  This is intended only for testing, and to make the installation
+go a bit smoother.  You should remove them before moving into a
+production environment.
+
+Remove anonymous users? [Y/n] y
+ ... Success!
+
+Normally, root should only be allowed to connect from 'localhost'.  This
+ensures that someone cannot guess at the root password from the network.
+
+Disallow root login remotely? [Y/n] y
+ ... Success!
+
+By default, MariaDB comes with a database named 'test' that anyone can
+access.  This is also intended only for testing, and should be removed
+before moving into a production environment.
+
+Remove test database and access to it? [Y/n] y
+ - Dropping test database...
+ ... Success!
+ - Removing privileges on test database...
+ ... Success!
+
+Reloading the privilege tables will ensure that all changes made so far
+will take effect immediately.
+
+Reload privilege tables now? [Y/n] y
+ ... Success!
+
+Cleaning up...
+
+All done!  If you've completed all of the above steps, your MariaDB
+installation should now be secure.
+
+Thanks for using MariaDB!
+```
+Выполняем ряд команд
+![БД ](img/bd.jpg)
+
+Проверим, что в nano /etc/zabbix/zabbix_server.conf DBPassword стал нашим.
+
+В браузере смотрим настройки и дозовершаем процесс, http://<публичный адрес zabbix>/zabbix
+![zab ](img/zabb.jpg)
+![zab ](img/zab1.jpg)
+Тут важно ввести верные данные и уже коннектиться к бд.
+
+Добавил автоинтеграцию
+![zab ](img/zzz3.jpg)
+![ddd222 ](img/ddd222.jpg)
 
