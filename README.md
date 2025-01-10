@@ -538,12 +538,14 @@ resource "yandex_compute_snapshot_schedule" "one_week_ttl_every_day" {
 - retention_period = "168h" - срок жизни неделя
 
 
+
 Настройка кибаны на http://<публичный адрес kibana>:5601
 
 Принимаем соглашения, создаем новый Data View
 
 `` name: Любое index-template: filebeat-*
 смотрим логи
+
 
 ## БД
 Заходим по ssh на машину с бд и делаем mysql_secure_installation
@@ -627,10 +629,10 @@ Thanks for using MariaDB!
 
 В браузере смотрим настройки и дозовершаем процесс, http://<публичный адрес zabbix>/zabbix
 ![zab ](img/zabb.jpg)
-![zab ](img/zab1.jpg)
+![zab3 ](img/zab1.jpg)
 Тут важно ввести верные данные и уже коннектиться к бд.
 
 Добавил автоинтеграцию
-![zab ](img/zzz3.jpg)
+![zab2 ](img/zzz3.jpg)
 ![ddd222 ](img/ddd222.jpg)
 
