@@ -156,6 +156,11 @@ subnets = {
     name = "sub-2"
     zone = "ru-central1-b"
     v4_cidr_blocks = ["192.168.30.0/24"]
+  },
+  "s-3" = {
+    name = "sub-3"
+    zone = "ru-central1-b"
+    v4_cidr_blocks = ["192.168.40.0/24"]
   }
 }
 
@@ -305,5 +310,56 @@ resource "yandex_compute_instance" "virtual_machine" {
 PS: на моменте создания виртуалок может возникнуть ошибка связанная с квотой. Для ее устранения придется делать заявку на повышения квоты на сети. делают быстро.
 
 Заходим на бастион в клауде, выключаем и добавляем ему сетевой интерфейс в одной из созданных сетей. После чего добавляем в системе в таблицу маршрутизации маршруты
+```
+ip route add 192.168.30.0/24 via 192.168.40.1
+ip route add 192.168.20.0/24 via 192.168.40.1
+```
+Далее идем настраивать балансеры.
+в main.tf дописываем
+```
+resource "yandex_lb_target_group" "nlb-group" {
+  name      = "nlb-group-1"
+  region_id = "ru-central1"
+
+  target {
+    subnet_id = yandex_vpc_subnet.subnet["s-1"].id
+    address   = yandex_compute_instance.virtual_machine["vm-1"].network_interface.0.ip_address
+  }
+
+  target {
+    subnet_id = yandex_vpc_subnet.subnet["s-2"].id
+    address   = yandex_compute_instance.virtual_machine["vm-2"].network_interface.0.ip_address
+  }
+}
+
+resource "yandex_lb_network_load_balancer" "nlb" {
+  name = "nlb"
+
+  listener {
+    name = "http"
+    port = 80
+    external_address_spec {
+      ip_version = "ipv4"
+    }
+  }
+
+  attached_target_group {
+    target_group_id = yandex_lb_target_group.nlb-group.id
+
+    healthcheck {
+      name = "http"
+      http_options {
+        port = 80
+        path = "/"
+      }
+    }
+  }
+}
+```
+
+
+
+
+
 
 
