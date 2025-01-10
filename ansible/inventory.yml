@@ -1,0 +1,23 @@
+linux: #группа хостов
+  children: #Обозначение, что будет подгруппа хостов
+    monitoring:
+      hosts:
+        elasticsearch:
+          ansible_host: fhm6nkhd5ph8kl0gf8fs.auto.internal
+        kibana:
+          ansible_host: fhm70remeeqi872qien9.auto.internal
+        zabbix:
+          ansible_host: fhmb2pg6ghl3p3648qdj.auto.internal
+    nginx:
+      hosts:
+        site-1:
+          ansible_host: fhmp0gn1on8bnhu1it16.auto.internal
+        site-2:
+          ansible_host: epd5dsen8akqvod9gj2j.auto.internal
+  vars: #Переменные, доступные и/или используемые для всех подрупп
+    ansible_user: "dmitriy_pronin"
+    connection_protocol: ssh #тип подключения
+    ansible_become: true #Становиться ли другим пользователем после подключения
+    ansible_ssh_private_key_file: ~/.ssh/id_ed25519
+    elastic_pass: ""
+    el-fqdn: fhm6nkhd5ph8kl0gf8fs.auto.internal

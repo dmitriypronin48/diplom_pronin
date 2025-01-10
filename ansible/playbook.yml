@@ -1,0 +1,29 @@
+- name: Установка стандартных пакетов
+  hosts: all
+  roles:
+    - role: default_packages
+    - role: install_agents
+  tags:
+    - install_packages
+    - install_agents
+
+- name: Установка и настройка nginx c кастомной страницей
+  hosts: nginx
+  roles:
+    - role: nginx_custom
+  tags:
+    - nginx_custom
+
+- name: Установка и настройка zabbix-server
+  hosts: monitoring
+  roles:
+    - role: zabbix-server
+  tags:
+    - zabbix_server
+
+- name: Установка ELK
+  hosts: monitoring
+  roles:
+    - elk
+  tags:
+    - elk
