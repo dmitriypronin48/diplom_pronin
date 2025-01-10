@@ -359,7 +359,8 @@ resource "yandex_lb_network_load_balancer" "nlb" {
 Далее ставим ansible на машину bastion - apt install ansible.
 
 ## Работаем с ансибл
-Создадим каталог для сохранения файлов ансибла и файлики mkdir ~/ansible && cd ~/ansible && touch inventory.yaml && touch playbook.yaml && touch ansible.cfg
+Создадим каталог для сохранения файлов ансибла и файлики 
+mkdir ~/ansible && cd ~/ansible && touch inventory.yaml && touch playbook.yaml && touch ansible.cfg
 
 
 
