@@ -634,5 +634,5 @@ Thanks for using MariaDB!
 
 Добавил автоинтеграцию
 ![zab2 ](img/zzz3.jpg)
-![ddd222 ](img/ddd222.jpg)
+![ddd222 ](img/ddd222.png)
 
