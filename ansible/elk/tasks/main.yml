@@ -1,0 +1,48 @@
+---
+# tasks file for elk
+
+- name: Download and install EL
+  ansible.builtin.apt_repository:
+    repo: deb [trusted=yes] https://mirror.yandex.ru/mirrors/elastic/8/ stable main
+    state: present
+  when: "'elastic' in inventory_hostname or 'kibana' in inventory_hostname"
+
+- name: Install EL
+  apt:
+    name:
+      - elasticsearch
+      - default-jdk
+    state: present
+  when: "'elastic' in inventory_hostname"
+
+- name: Replace Config
+  template:
+    src: elasticsearch.j2
+    dest: /etc/elasticsearch/elasticsearch.yml
+  when: "'elastic' in inventory_hostname"
+
+- name: Start and Enable EL
+  service:
+    name: elasticsearch
+    state: restarted
+    enabled: true
+  when: "'elastic' in inventory_hostname"
+
+- name: Install Kibana
+  apt:
+    name: kibana
+    state: present
+  when: "'kibana' in inventory_hostname"
+
+- name: Replace Kibana conf
+  template:
+    src: kibana.j2
+    dest: /etc/kibana/kibana.yml
+  when: "'kibana' in inventory_hostname"
+
+- name: Start and Enable Kibana
+  service:
+    name: kibana
+    state: restarted
+    enabled: true
+  when: "'kibana' in inventory_hostname"
