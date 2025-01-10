@@ -61,4 +61,249 @@ cp yandex-cloud/bin/* /usr/bin/
 - Нажимаем на созданную учётную запись
 - Копируем ID себе
 
+Подключаемся к машине bastion.
+требуется скорректировать через nano ~/.terraformrc ,  вписываем:
+```
+provider_installation {
+  network_mirror {
+    url = "https://terraform-mirror.yandexcloud.net/"include = ["registry.terraform.io/*/*"]
+  }
+  direct {
+    exclude = ["registry.terraform.io/*/*"]
+  }
+}
+```
+
+Делается это для того, чтобы провайдер бралились из https://terraform-mirror.yandexcloud.net/ , чтобы тераформ не пытался скачивать провайдеры из своего репозитория.
+
+Создаем ключ авторизации для провайдера:
+```
+yc iam key create \
+  --service-account-id <id сервисного аккаунта, который копировали себе> \
+  --folder-name default \
+  --output key.json 
+```
+
+Требуется еще войти в https://console.yandex.cloud/ забрать нужные нам данные для авторизации в консоле:
+
+- имя облака — оно начинается с cloud-. Рядом с ним появится ID, который нужно скопировать себе.
+- имя каталога под названием облака — сохраняем себе ID.
+
+
+Идем в консоль нашей машины bastion
+По очереди выполняем команды и записываем их себе, потому что при перезагрузке ВМ настройки слетят и придется выполнять их по-новой:
+```
+yc config profile create <любое имя профиля> - создается один раз
+yc config set service-account-key key.json - ключ которы генерился после инициализации
+yc config set cloud-id <ID облака> 
+yc config set folder-id <ID каталога>
+    
+export YC_TOKEN=$(yc iam create-token) 
+export YC_CLOUD_ID=$(yc config get cloud-id)
+export YC_FOLDER_ID=$(yc config get folder-id) 
+```
+
+Настраиваем провайдер. Для этого создадим новый каталог с любым именем и перейдем в него, после чего создаем файл providers.tf
+```
+mkdir ~/terraform_yandex && cd ~/terraform_yandex && touch providers.tf
+```
+В созданном файле добавляем содержимое
+```
+terraform {
+  required_providers {
+    yandex = {
+      source = "yandex-cloud/yandex"
+    }
+  }
+  required_version = ">= 0.13"
+}
+
+provider "yandex" {
+  zone = "ru-central1-b"
+}
+```
+Для проверки, что нет ошибки выполним команду terraform init
+![Скрин 4](img/init_success.png)
+
+
+### Описание структуры
+1. providers.tf - настройка провайдера, уже выполнено
+2. variables.tf - тут хранятся только дефолтные значения, которые можно переписать в других файлах
+3. terraform.tfvars - файлы с переменными. Они используются для перезаписи из variables.tf
+4. output.tf - в нем описывается что должно отобразиться в консоли после выполнения действий
+5. main.tf - что будет делать терраформ
+
+variables.tf
+```
+variable "virtual_machines" {
+ default = ""
+}
+
+variable "subnets" {
+ default = ""
+}
+```
+
+Всю структуру описываем в *.tfvars. Для этого создадим файл vms.tfvars с содержимым:
+```
+subnets = {
+  "s-1" = {
+    name = "sub-1"
+    zone = "ru-central1-a"
+    v4_cidr_blocks = ["192.168.20.0/24"]
+  },
+  "s-2" = {
+    name = "sub-2"
+    zone = "ru-central1-b"
+    v4_cidr_blocks = ["192.168.30.0/24"]
+  }
+}
+
+virtual_machines = {
+    "vm-1" = {
+      vm_name       = "site-1" # Имя ВМ
+      vm_desc       = "Описание для нас. Его видно только здесь" # Описание
+      vm_cpu        = 2 # Кол-во ядер процессора
+      ram           = 2 # Оперативная память в ГБ
+      disk          = 10 # Объем диска в ГБ
+      disk_name     = "site-1-disk" # Название диска
+      template      = "fd85bll745cg76f707mq" # ID образа ОС для использования
+      public_ip     = false
+      managed       = true
+      zone          = "ru-central1-a"
+      disk_type     = "network-hdd"
+      core_fraction = 20
+      platform_id   = "standard-v3"
+      subnet        = "s-1"
+    },
+    "vm-2" = {
+      vm_name      = "site-2" # Имя ВМ
+      vm_desc      = "Описание для инженеров. Его видно только здесь"
+      vm_cpu       = 2 # Кол-во ядер процессора
+      ram          = 2 # Оперативная память в ГБ
+      disk         = 10 # Объем диска в ГБ
+      disk_name    = "site-2-disk" # Название диска
+      template     = "fd85bll745cg76f707mq" # ID образа ОС для использования
+      public_ip    = false
+      managed      = true
+      zone         = "ru-central1-b"
+      disk_type    = "network-hdd"
+      core_fraction = 20
+      platform_id   = "standard-v3"
+      subnet        = "s-2"
+    },
+    "vm-3" = {
+      vm_name      = "elasticsearch" # Имя ВМ
+      vm_desc      = "Описание для инженеров. Его видно только здесь"
+      vm_cpu       = 2 # Кол-во ядер процессора
+      ram          = 2 # Оперативная память в ГБ
+      disk         = 20 # Объем диска в ГБ
+      disk_name    = "elasticsearch4-disk" # Название диска
+      template     = "fd85bll745cg76f707mq" # ID образа ОС для использования
+      public_ip    = false
+      managed      = true
+      zone         = "ru-central1-a"
+      disk_type    = "network-hdd"
+      core_fraction = 100
+      platform_id   = "standard-v3"
+      subnet        = "s-1"
+    },
+    "vm-4" = {
+      vm_name      = "zabbix" # Имя ВМ
+      vm_desc      = "Описание для инженеров. Его видно только здесь"
+      vm_cpu       = 2 # Кол-во ядер процессора
+      ram          = 2 # Оперативная память в ГБ
+      disk         = 20 # Объем диска в ГБ
+      disk_name    = "zabbix-disk" # Название диска
+      template     = "fd85bll745cg76f707mq" # ID образа ОС для использования
+      public_ip    = true
+      managed      = true
+      zone         = "ru-central1-a"
+      disk_type    = "network-hdd"
+      core_fraction = 100
+      platform_id   = "standard-v3"
+      subnet        = "s-1"
+    },
+    "vm-5" = {
+      vm_name      = "kibana" # Имя ВМ
+      vm_desc      = "Описание для инженеров. Его видно только здесь"
+      vm_cpu       = 2 # Кол-во ядер процессора
+      ram          = 2 # Оперативная память в ГБ
+      disk         = 20 # Объем диска в ГБ
+      disk_name    = "kibana-disk" # Название диска
+      template     = "fd85bll745cg76f707mq" # ID образа ОС для использования
+      public_ip    = true
+      managed      = true
+      zone         = "ru-central1-a"
+      disk_type    = "network-hdd"
+      core_fraction = 100
+      platform_id   = "standard-v3"
+      subnet        = "s-1"
+    }
+}
+```
+Надо создать ключ пару
+```
+ssh-keygen -t ed25519
+```
+Ключи будут вот тут -->> ~/.ssh/id_ed25519.pub и тут же приватник
+
+Создаем файл main.tf с содержимым:
+```
+resource "yandex_compute_disk" "boot-disk" {
+  for_each = var.virtual_machines
+  name     = each.value["disk_name"]
+  type     = each.value["disk_type"]
+  zone     = each.value["zone"]
+  size     = each.value["disk"]
+  image_id = each.value["template"]
+}
+
+resource "yandex_vpc_network" "network-1" {
+  name = "network-1"
+}
+
+resource "yandex_vpc_subnet" "subnet" {
+  for_each       = var.subnets
+  name           = each.value["name"]
+  zone           = each.value["zone"]
+  network_id     = yandex_vpc_network.network-1.id
+  v4_cidr_blocks = each.value["v4_cidr_blocks"]
+}
+
+resource "yandex_compute_instance" "virtual_machine" {
+  for_each        = var.virtual_machines
+  name = each.value["vm_name"]
+  zone = each.value["zone"]
+  allow_stopping_for_update = true
+
+  platform_id = each.value["platform_id"]
+  resources {
+    cores  = each.value["vm_cpu"]
+    memory = each.value["ram"]
+    core_fraction = each.value["core_fraction"]
+  }
+
+  boot_disk {
+    disk_id = yandex_compute_disk.boot-disk[each.key].id
+  }
+
+  network_interface {
+    subnet_id = yandex_vpc_subnet.subnet[each.value.subnet].id
+    nat       = each.value["public_ip"]
+  }
+
+  metadata = {
+    ssh-keys = "dmitriy_pronin:${file("~/.ssh/id_ed25519.pub")}"
+  }
+}
+```
+
+Далее запускаем terraform apply и ждем как все прокатиться.
+![Скрин 4](img/aply.jpg)
+
+PS: на моменте создания виртуалок может возникнуть ошибка связанная с квотой. Для ее устранения придется делать заявку на повышения квоты на сети. делают быстро.
+
+Заходим на бастион в клауде, выключаем и добавляем ему сетевой интерфейс в одной из созданных сетей. После чего добавляем в системе в таблицу маршрутизации маршруты
+
 
