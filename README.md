@@ -547,6 +547,9 @@ resource "yandex_compute_snapshot_schedule" "one_week_ttl_every_day" {
 смотрим логи
 
 
+Тачки у нас получились вот такие после запуска терраформа:
+![тачка ](img/tt.jpg)
+
 ## БД
 Заходим по ssh на машину с бд и делаем mysql_secure_installation
 Далее настраиваем 
