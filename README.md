@@ -645,7 +645,7 @@ Thanks for using MariaDB!
 ![zab3 ](img/zabbix_11.jpg)
 
 Кибана логи:
-![zab3 ](img/zabbix_11.jpg)
+![zab3 ](kibana0202.jpg)
 ```
 кибана - http://158.160.56.26:5601/
 ```
