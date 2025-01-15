@@ -20,16 +20,6 @@ resource "yandex_vpc_route_table" "route_with_nat" {
   network_id = "${yandex_vpc_network.network-1.id}"
 
   static_route {
-    destination_prefix = "192.168.50.0/24"
-    next_hop_address   = "192.168.30.1"
-  }
-
-  static_route {
-    destination_prefix = "192.168.60.0/24"
-    next_hop_address   = "192.168.30.1"
-  }
-
-  static_route {
     destination_prefix = "0.0.0.0/0"
     gateway_id         = "${yandex_vpc_gateway.private_net.id}"
   }
