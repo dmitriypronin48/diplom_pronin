@@ -3,21 +3,22 @@ linux: #группа хостов
     monitoring:
       hosts:
         elasticsearch:
-          ansible_host: fhm6nkhd5ph8kl0gf8fs.auto.internal
+          ansible_host: fhmgoh3c06qf70cehflv.auto.internal
         kibana:
-          ansible_host: fhm70remeeqi872qien9.auto.internal
+          ansible_host: fhmkoqbt4a3i3f09cv8o.auto.internal
         zabbix:
-          ansible_host: fhmb2pg6ghl3p3648qdj.auto.internal
+          ansible_host: fhml45hq6pmg6ma06nvr.auto.internal
     nginx:
       hosts:
         site-1:
-          ansible_host: fhmp0gn1on8bnhu1it16.auto.internal
+          ansible_host: fhmh65i01b15c8e9kqdj.auto.internal
         site-2:
-          ansible_host: epd5dsen8akqvod9gj2j.auto.internal
+          ansible_host: epd7hos08oc73p7g8k1t.auto.internal
   vars: #Переменные, доступные и/или используемые для всех подрупп
     ansible_user: "dmitriy_pronin"
     connection_protocol: ssh #тип подключения
     ansible_become: true #Становиться ли другим пользователем после подключения
     ansible_ssh_private_key_file: ~/.ssh/id_ed25519
     elastic_pass: ""
-    el-fqdn: fhm6nkhd5ph8kl0gf8fs.auto.internal
+    el-fqdn: fhmgoh3c06qf70cehflv.auto.internal
+    zabix-fqdn: fhml45hq6pmg6ma06nvr.auto.internal
