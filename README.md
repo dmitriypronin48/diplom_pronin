@@ -165,6 +165,22 @@ subnets = {
 }
 
 virtual_machines = {
+    "vm-0" = {
+      vm_name       = "bastion2" # Имя ВМ
+      vm_desc       = "Описание для нас. Его видно только здесь" # Описание
+      vm_cpu        = 2 # Кол-во ядер процессора
+      ram           = 2 # Оперативная память в ГБ
+      disk          = 20 # Объем диска в ГБ
+      disk_name     = "bastion-1-disk" # Название диска
+      template      = "fd85bll745cg76f707mq" # ID образа ОС для использования
+      public_ip     = true
+      managed       = true
+      zone          = "ru-central1-a"
+      disk_type     = "network-hdd"
+      core_fraction = 20
+      platform_id   = "standard-v3"
+      subnet        = "s-1"
+    },
     "vm-1" = {
       vm_name       = "site-1" # Имя ВМ
       vm_desc       = "Описание для нас. Его видно только здесь" # Описание
@@ -309,11 +325,7 @@ resource "yandex_compute_instance" "virtual_machine" {
 
 PS: на моменте создания виртуалок может возникнуть ошибка связанная с квотой. Для ее устранения придется делать заявку на повышения квоты на сети. делают быстро.
 
-Заходим на бастион в клауде, выключаем и добавляем ему сетевой интерфейс в одной из созданных сетей. После чего добавляем в системе в таблицу маршрутизации маршруты
-```
-ip route add 192.168.30.0/24 via 192.168.40.1
-ip route add 192.168.20.0/24 via 192.168.40.1
-```
+
 Далее идем настраивать балансеры.
 в main.tf дописываем
 ```
@@ -465,7 +477,10 @@ nano nginx_custom/templates/main.yml
 </body>
 ```
 Прокатил роль ансибла ansible-playbook -i inventory.yaml playbook.yaml
-
+```
+сайт - http://158.160.142.78/
+```
+![скрин нжинкс](img/22-1.jpg)
 
 Тут достаточно емко описывать каждый шаг как он выглядит, целесообразней поглядеть как в приложенных файлах под ансибл.
 Сделал раскатку сразу всех компонентов, чтобы не тратить поодиночке на запуск ролей с плейбуками.
@@ -481,16 +496,6 @@ resource "yandex_vpc_gateway" "private_net" {
 
 resource "yandex_vpc_route_table" "route_with_nat" {
   network_id = "${yandex_vpc_network.network-1.id}" 
-
-  static_route {
-    destination_prefix = "192.168.30.0/24"
-    next_hop_address   = "192.168.30.1"
-  }
-
-  static_route {
-    destination_prefix = "192.168.20.0/24"
-    next_hop_address   = "192.168.30.1"
-  }
 
   static_route {
     destination_prefix = "0.0.0.0/0"
@@ -548,7 +553,7 @@ resource "yandex_compute_snapshot_schedule" "one_week_ttl_every_day" {
 
 
 Тачки у нас получились вот такие после запуска терраформа:
-![тачка ](img/tt.jpg)
+![тачка ](img/cloud22.jpg)
 
 ## БД
 Заходим по ssh на машину с бд и делаем mysql_secure_installation
@@ -634,6 +639,14 @@ Thanks for using MariaDB!
 ![zab ](img/zabb.jpg)
 ![zab3 ](img/zab1.jpg)
 Тут важно ввести верные данные и уже коннектиться к бд.
+```
+забикс - http://158.160.58.218/zabbix
+```
+![zab3 ](img/zabbix_11.jpg)
 
-
+Кибана логи:
+![zab3 ](img/zabbix_11.jpg)
+```
+кибана - http://158.160.56.26:5601/
+```
 
