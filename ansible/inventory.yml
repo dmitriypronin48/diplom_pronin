@@ -20,5 +20,5 @@ linux: #группа хостов
     ansible_become: true #Становиться ли другим пользователем после подключения
     ansible_ssh_private_key_file: ~/.ssh/id_ed25519
     elastic_pass: ""
-    el-fqdn: fhmgoh3c06qf70cehflv.auto.internal
-    zabix-fqdn: fhml45hq6pmg6ma06nvr.auto.internal
+    el_fqdn: fhmgoh3c06qf70cehflv.auto.internal
+    zabix_fqdn: fhml45hq6pmg6ma06nvr.auto.internal
