@@ -16,8 +16,25 @@ subnets = {
   }
 }
 
+
 virtual_machines = {
-    "vm-1" = {
+    "vm-0" = {
+      vm_name       = "bastion2" # Имя ВМ
+      vm_desc       = "Описание для нас. Его видно только здесь" # Описание
+      vm_cpu        = 2 # Кол-во ядер процессора
+      ram           = 2 # Оперативная память в ГБ
+      disk          = 20 # Объем диска в ГБ
+      disk_name     = "bastion-1-disk" # Название диска
+      template      = "fd85bll745cg76f707mq" # ID образа ОС для использования
+      public_ip     = true
+      managed       = true
+      zone          = "ru-central1-a"
+      disk_type     = "network-hdd"
+      core_fraction = 20
+      platform_id   = "standard-v3"
+      subnet        = "s-1"
+    },
+   "vm-1" = {
       vm_name       = "site-1" # Имя ВМ
       vm_desc       = "Описание для нас. Его видно только здесь" # Описание
       vm_cpu        = 2 # Кол-во ядер процессора
