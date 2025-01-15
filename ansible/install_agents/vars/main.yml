@@ -1,4 +1,3 @@
 ---
 # vars file for install_agents
-zabbix_server: fhmb2pg6ghl3p3648qdj.auto.internal
-log_server: fhm6nkhd5ph8kl0gf8fs.auto.internal
+
